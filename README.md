@@ -1,7 +1,8 @@
-# Vegam Reader - vegam-reader.aparnaa.site
+# Vegam Reader 
+[Visit Vegam Reader](https://vegam-reader.aparnaa.site)
 
 **To feed your vivegam** 
-A Bionic Reading app that transforms text into a focus‑optimized experience for engineers, creators, and entrepreneurs (who suffers Brain-Rot). 
+A Bionic Reading app that transforms text into a focus‑optimized experience for engineers, creators, and entrepreneurs (who suffers Brain-Rot, haha). 
 Cut through doomscrolling, read faster, retain deeper.
 
 
