@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,600;1,400&family=DM+Mono:wght@400;500&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&display=swap');
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --vellum: #F5F0E8; --ink: #1C1712; --ink-muted: #5C5248; --ink-ghost: #9C9088;
+    --accent: #8B4513; --accent-soft: #D4956A; --accent-bg: #FAF0E6;
+    --pacer: rgba(139,69,19,0.18);
+    --serif: 'EB Garamond','Libre Baskerville',Georgia,serif;
+    --mono: 'DM Mono',monospace; --font-sz: 19px;
+  }
+  body { font-family: var(--serif); background: var(--vellum); color: var(--ink); min-height: 100vh; overflow-x: hidden; }
+  #topbar {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 300;
+    background: rgba(245,240,232,0.96); backdrop-filter: blur(8px);
+    border-bottom: 1px solid rgba(139,69,19,0.15);
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 28px; gap: 16px;
+  }
+  #logo { font-family: var(--serif); font-size: 20px; font-weight: 600; color: var(--accent); letter-spacing: -0.02em; white-space: nowrap; }
+  #logo span { color: var(--ink-muted); font-weight: 400; font-size: 14px; margin-left: 6px; font-style: italic; }
+  .ctrl-row { display: flex; align-items: center; gap: 14px; }
+  .ctrl-label { font-family: var(--mono); font-size: 11px; color: var(--ink-ghost); text-transform: uppercase; letter-spacing: 0.06em; }
+  .ctrl-row input[type=range] { width: 72px; accent-color: var(--accent); cursor: pointer; }
+  .val-pill { font-family: var(--mono); font-size: 12px; color: var(--accent); background: var(--accent-bg); border: 1px solid rgba(139,69,19,0.2); border-radius: 20px; padding: 2px 8px; min-width: 36px; text-align: center; }
+  .top-btn { font-family: var(--mono); font-size: 12px; cursor: pointer; background: transparent; border: 1px solid rgba(139,69,19,0.35); color: var(--ink-muted); padding: 5px 12px; border-radius: 6px; transition: all 0.18s; white-space: nowrap; position: relative; z-index: 400; }
+  .top-btn:hover { background: var(--accent-bg); color: var(--accent); border-color: var(--accent-soft); }
+  .top-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .top-btn.paused { background: rgba(139,69,19,0.12); color: var(--accent); border-color: var(--accent-soft); border-style: dashed; }
+  #metrics-strip {
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 300;
+    background: rgba(245,240,232,0.95); border-top: 1px solid rgba(139,69,19,0.15);
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 8px 28px; gap: 12px;
+  }
+  .metric { display: flex; flex-direction: column; align-items: center; gap: 1px; }
+  .metric-val { font-family: var(--mono); font-size: 15px; font-weight: 500; color: var(--accent); }
+  .metric-label { font-family: var(--mono); font-size: 10px; color: var(--ink-ghost); text-transform: uppercase; letter-spacing: 0.05em; }
+  .metric-sep { width: 1px; height: 28px; background: rgba(139,69,19,0.15); }
+  #progress-bar { position: fixed; top: 57px; left: 0; right: 0; z-index: 99; height: 3px; background: rgba(139,69,19,0.1); }
+  #progress-fill { height: 100%; background: linear-gradient(90deg, var(--accent-soft), var(--accent)); width: 0%; transition: width 0.3s ease; }
+  #pacer-line { position: fixed; left: 0; right: 0; z-index: 98; height: 2px; background: rgba(139,69,19,0.22); pointer-events: none; display: none; }
+  #pacer-line::after { content: ''; position: absolute; inset: -6px 0; background: var(--pacer); border-radius: 2px; }
+  #canvas { max-width: 720px; margin: 0 auto; padding: 100px 48px 100px; min-height: 100vh; }
+  #welcome { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; min-height: 60vh; gap: 20px; }
+  #welcome h1 { font-size: 42px; font-weight: 400; color: var(--accent); font-style: italic; }
+  #welcome p { font-size: 16px; color: var(--ink-muted); line-height: 1.7; max-width: 420px; }
+  #welcome textarea { width: 100%; max-width: 560px; height: 160px; font-family: var(--serif); font-size: 15px; color: var(--ink); background: rgba(255,255,255,0.6); border: 1px solid rgba(139,69,19,0.25); border-radius: 10px; padding: 14px 16px; resize: vertical; outline: none; line-height: 1.6; }
+  #welcome textarea:focus { border-color: var(--accent-soft); }
+  .welcome-actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+  .btn-primary { font-family: var(--mono); font-size: 13px; cursor: pointer; background: var(--accent); color: #fff; border: none; padding: 10px 22px; border-radius: 8px; transition: all 0.18s; }
+  .btn-primary:hover { background: #6B3410; }
+  .pdf-label { font-family: var(--mono); font-size: 13px; cursor: pointer; background: transparent; color: var(--ink-muted); border: 1px solid rgba(139,69,19,0.3); padding: 10px 22px; border-radius: 8px; transition: all 0.18s; display: flex; align-items: center; gap: 6px; }
+  .pdf-label:hover { background: var(--accent-bg); color: var(--accent); }
+  #pdf-input { display: none; }
+  #reader { display: none; }
+  .para-block { margin-bottom: 1.6em; font-size: var(--font-sz); line-height: 1.85; color: var(--ink); transition: opacity 0.3s; border-radius: 6px; padding: 6px 10px; margin-left: -10px; }
+  .para-block.dimmed { opacity: 0.28; }
+  .para-block.active { opacity: 1; background: rgba(139,69,19,0.04); }
+  b.bionic { font-weight: 700; }
+  #metrics-page { display: none; padding: 30px 0; }
+  .metrics-title { font-size: 28px; font-weight: 400; font-style: italic; color: var(--accent); margin-bottom: 24px; }
+  .stats-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 14px; margin-bottom: 28px; }
+  .stat-card { background: rgba(255,255,255,0.55); border: 1px solid rgba(139,69,19,0.15); border-radius: 12px; padding: 16px; text-align: center; }
+  .stat-card .sv { font-family: var(--mono); font-size: 26px; font-weight: 500; color: var(--accent); }
+  .stat-card .sl { font-family: var(--mono); font-size: 11px; color: var(--ink-ghost); text-transform: uppercase; letter-spacing: 0.05em; margin-top: 4px; }
+  .vault-title { font-size: 20px; font-weight: 400; font-style: italic; color: var(--ink-muted); margin-bottom: 14px; }
+  .vault-entry { background: rgba(255,255,255,0.45); border-left: 3px solid var(--accent-soft); padding: 12px 16px; border-radius: 0 8px 8px 0; margin-bottom: 10px; font-style: italic; color: var(--ink-muted); line-height: 1.6; font-size: 15px; }
+  .vault-entry-meta { font-family: var(--mono); font-size: 11px; color: var(--ink-ghost); margin-top: 5px; font-style: normal; }
+  .heat-bar-wrap { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+  .heat-para-label { font-family: var(--mono); font-size: 11px; color: var(--ink-ghost); width: 60px; flex-shrink: 0; }
+  .heat-bar-bg { flex: 1; height: 8px; background: rgba(139,69,19,0.1); border-radius: 4px; overflow: hidden; }
+  .heat-bar-fill { height: 100%; border-radius: 4px; background: var(--accent-soft); }
+  #recall-modal { display: none; position: fixed; inset: 0; z-index: 500; background: rgba(28,23,18,0.7); backdrop-filter: blur(6px); align-items: center; justify-content: center; }
+  #recall-modal.open { display: flex; }
+  .recall-box { background: var(--vellum); border: 1px solid rgba(139,69,19,0.3); border-radius: 16px; padding: 36px 40px; max-width: 480px; width: 90%; text-align: center; }
+  .recall-box h2 { font-size: 22px; font-weight: 400; font-style: italic; color: var(--accent); margin-bottom: 8px; }
+  .recall-box p { font-size: 15px; color: var(--ink-muted); margin-bottom: 20px; }
+  .recall-box input { width: 100%; font-family: var(--serif); font-size: 16px; background: rgba(255,255,255,0.6); border: 1px solid rgba(139,69,19,0.25); border-radius: 8px; padding: 12px 14px; outline: none; color: var(--ink); }
+  .recall-box input:focus { border-color: var(--accent-soft); }
+  .recall-actions { display: flex; gap: 10px; justify-content: center; margin-top: 14px; }
+  .streak-grid { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 8px; }
+  .streak-day { width: 14px; height: 14px; border-radius: 3px; background: rgba(139,69,19,0.1); }
+  .streak-day.active { background: var(--accent-soft); }
+  .streak-day.today { background: var(--accent); }
+  .nav-tabs { display: flex; gap: 4px; }
+  .nav-tab { font-family: var(--mono); font-size: 12px; cursor: pointer; background: transparent; border: 1px solid rgba(139,69,19,0.25); color: var(--ink-muted); padding: 5px 12px; border-radius: 6px; transition: all 0.18s; }
+  .nav-tab:hover { background: var(--accent-bg); color: var(--accent); }
+  .nav-tab.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+  /* Pause banner — sits BELOW the topbar, never covers it */
+  #pause-banner {
+    display: none;
+    position: fixed; top: 57px; left: 0; right: 0; z-index: 200;
+    background: rgba(139,69,19,0.08);
+    border-bottom: 1px dashed rgba(139,69,19,0.25);
+    padding: 10px 28px;
+    align-items: center; justify-content: center; gap: 16px;
+    pointer-events: none;
+  }
+  #pause-banner.visible { display: flex; }
+  #pause-banner .pb-label { font-family: var(--mono); font-size: 12px; color: var(--ink-ghost); text-transform: uppercase; letter-spacing: 0.07em; }
+  #pause-banner .pb-time { font-family: var(--mono); font-size: 14px; font-weight: 500; color: var(--accent); }
+</style>
+</head>
+<body>
+
+<div id="topbar">
+  <div style="display:flex;align-items:center;gap:18px;">
+    <div id="logo">Vegam <span>Wisdom Sanctuary</span></div>
+    <div class="nav-tabs">
+      <button class="nav-tab active" onclick="showView('reader')">Reader</button>
+      <button class="nav-tab" onclick="showView('metrics')">Metrics</button>
+    </div>
+  </div>
+  <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+    <div class="ctrl-row">
+      <span class="ctrl-label">Fixation</span>
+      <input type="range" id="fixation" min="1" max="6" value="2" oninput="updateControls()">
+      <span class="val-pill" id="fix-val">2</span>
+    </div>
+    <div class="ctrl-row">
+      <span class="ctrl-label">WPM</span>
+      <input type="range" id="wpm-ctrl" min="100" max="800" step="25" value="250" oninput="updateControls()">
+      <span class="val-pill" id="wpm-val">250</span>
+    </div>
+    <div style="display:flex;gap:6px;">
+      <button class="top-btn" id="pause-btn" onclick="togglePause()" style="display:none;">⏸ Pause</button>
+      <button class="top-btn" id="pacer-btn" onclick="togglePacer()">⏱ Pacer</button>
+      <button class="top-btn" id="zen-btn" onclick="toggleZen()">🌿 Zen</button>
+    </div>
+  </div>
+</div>
+
+<div id="progress-bar"><div id="progress-fill"></div></div>
+<div id="pacer-line"></div>
+
+<!-- Thin banner below topbar — never blocks the topbar itself -->
+<div id="pause-banner">
+  <span class="pb-label">Paused —</span>
+  <span class="pb-time" id="pause-display">0:00</span>
+  <span class="pb-label">· click Resume above to continue</span>
+</div>
+
+<div id="canvas">
+  <div id="welcome">
+    <h1>Begin Reading</h1>
+    <p>Paste any text below, or upload a PDF to transform it into Bionic format.</p>
+    <textarea id="paste-area" placeholder="Paste your text here…"></textarea>
+    <div class="welcome-actions">
+      <button class="btn-primary" onclick="loadText()">→ Enter Reader</button>
+      <label class="pdf-label" for="pdf-input">📄 Upload PDF</label>
+      <input type="file" id="pdf-input" accept=".pdf,.txt" onchange="handleFile(event)">
+      <button class="pdf-label" style="cursor:pointer;border:none;" onclick="loadDemo()">✦ Load Demo</button>
+    </div>
+  </div>
+
+  <div id="reader"></div>
+
+  <div id="metrics-page">
+    <div class="metrics-title">Your Wisdom Dashboard</div>
+    <div class="stats-grid">
+      <div class="stat-card"><div class="sv" id="s-wpm">250</div><div class="sl">WPM</div></div>
+      <div class="stat-card"><div class="sv" id="s-words">0</div><div class="sl">Words Read</div></div>
+      <div class="stat-card"><div class="sv" id="s-time">0m</div><div class="sl">Session Time</div></div>
+      <div class="stat-card"><div class="sv" id="s-focus">100%</div><div class="sl">Focus Score</div></div>
+      <div class="stat-card"><div class="sv" id="s-insights">0</div><div class="sl">Insights Saved</div></div>
+      <div class="stat-card"><div class="sv">1 🔥</div><div class="sl">Day Streak</div></div>
+    </div>
+    <div style="margin-bottom:24px;">
+      <div class="vault-title">Retention Heatmap</div>
+      <div id="heatmap-bars"></div>
+    </div>
+    <div style="margin-bottom:24px;">
+      <div class="vault-title">Reading Streak</div>
+      <div class="streak-grid" id="streak-grid"></div>
+    </div>
+    <div>
+      <div class="vault-title">Wisdom Vault</div>
+      <div id="vault-entries"><p style="font-family:var(--mono);font-size:12px;color:var(--ink-ghost);font-style:italic;">Your insights will appear here after Recall checkpoints.</p></div>
+    </div>
+  </div>
+</div>
+
+<div id="metrics-strip">
+  <div class="metric"><div class="metric-val" id="m-wpm">250</div><div class="metric-label">WPM</div></div>
+  <div class="metric-sep"></div>
+  <div class="metric"><div class="metric-val" id="m-words">0</div><div class="metric-label">Words</div></div>
+  <div class="metric-sep"></div>
+  <div class="metric"><div class="metric-val" id="m-pct">0%</div><div class="metric-label">Progress</div></div>
+  <div class="metric-sep"></div>
+  <div class="metric"><div class="metric-val" id="m-focus">100</div><div class="metric-label">Focus</div></div>
+  <div class="metric-sep"></div>
+  <div class="metric">
+    <div style="display:flex;align-items:center;gap:5px;">
+      <div class="metric-val" id="m-time">0:00</div>
+      <div id="pulse-dot" style="width:6px;height:6px;border-radius:50%;background:var(--accent-soft);display:none;"></div>
+    </div>
+    <div class="metric-label">Session</div>
+  </div>
+  <div class="metric-sep"></div>
+  <div class="metric"><div class="metric-val">🔥 1</div><div class="metric-label">Streak</div></div>
+</div>
+
+<div id="recall-modal">
+  <div class="recall-box">
+    <h2>Recall Checkpoint</h2>
+    <p>In one sentence, what was the most interesting idea you just read?</p>
+    <input type="text" id="recall-input" placeholder="Write your insight…" maxlength="200">
+    <div class="recall-actions">
+      <button class="btn-primary" onclick="saveInsight()">Save to Vault ✦</button>
+      <button class="top-btn" onclick="closeRecall()">Skip</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+const state = {
+  paragraphs:[], paraWords:[], paraTimeSpent:[], totalWords:0,
+  wordsRead:0, sessionStart:Date.now(), accumulatedMs:0,
+  isPaused:false, pauseStart:null, pauseTickId:null,
+  focusScore:100, focusDeductions:0, insights:[],
+  wpm:250, fixation:2, zenMode:false,
+  pacerOn:false, pacerY:80, pacerInterval:null,
+  activePara:0, recallEvery:600, nextRecall:600,
+  sessionTimer:null, paraObservers:[], heatTimer:null
+};
+
+function bionicWord(w, f) {
+  const c = w.replace(/[^a-zA-Z0-9]/g,'');
+  if (c.length <= 1) return w;
+  const n = Math.max(1, Math.ceil(c.length/f));
+  return `<b class="bionic">${w.slice(0,n)}</b>${w.slice(n)}`;
+}
+function bionicPara(text, f) {
+  return text.split(/(\s+)/).map(t => /\s/.test(t) ? t : bionicWord(t,f)).join('');
+}
+
+const DEMO = `The act of reading deeply is one of the oldest technologies for expanding the mind. Long before the internet fragmented attention into dopamine-soaked shards, books demanded something extraordinary from their readers: sustained presence.
+
+Bionic Reading rests on a simple neuro-scientific insight. The brain does not process text letter by letter. Instead, it performs rapid pattern recognition, using the first few letters of a word as an anchor while the rest is predicted. By bolding these initial letters, we prime the visual cortex, reducing the cognitive load needed to decode each word. The eye can move faster, but the mind comprehends no less.
+
+Reading speed is not merely about how quickly your eyes move across a page. It encompasses the rate at which meaning is extracted, held in working memory, and integrated with existing knowledge. Most adults read at around 250 words per minute. Trained speed-readers can sustain 500 to 700 WPM without significant comprehension loss.
+
+The pacer — a horizontal line moving down the page at a set velocity — is borrowed from music. A metronome does not play music; it creates the temporal container within which music happens. Similarly, a reading pacer does not read for you; it creates the temporal container within which your attention is forced to remain present.
+
+Deep work, as described by Cal Newport, is the ability to focus without distraction on a cognitively demanding task. Reading is perhaps the most ancient form of deep work. Every time you resist the urge to check your phone while reading a paragraph, you strengthen a neural pathway that makes the next act of resistance slightly easier.
+
+The wisdom you accumulate through reading is not a collection of facts. It is a change in the quality of your attention. You begin to notice patterns that others miss, to hold complexity without resolving it prematurely, and to inhabit the minds of people radically different from yourself. This is the true return on your investment in reading.`;
+
+function loadDemo() { document.getElementById('paste-area').value = DEMO; loadText(); }
+function loadText() { const r = document.getElementById('paste-area').value.trim(); if(r) processText(r); }
+function handleFile(e) {
+  const file = e.target.files[0]; if(!file) return;
+  if (file.name.endsWith('.txt')) { const r=new FileReader(); r.onload=ev=>processText(ev.target.result); r.readAsText(file); }
+  else if (file.name.endsWith('.pdf')) {
+    const r=new FileReader();
+    r.onload=async ev=>{
+      try {
+        const arr=new Uint8Array(ev.target.result);
+        const pdf=await pdfjsLib.getDocument({data:arr}).promise;
+        let txt='';
+        for(let i=1;i<=pdf.numPages;i++){const pg=await pdf.getPage(i);const c=await pg.getTextContent();txt+=c.items.map(x=>x.str).join(' ')+'\n\n';}
+        processText(txt);
+      } catch { processText("PDF loaded — try a text-layer PDF for best results."); }
+    };
+    r.readAsArrayBuffer(file);
+  }
+}
+function processText(raw) {
+  const paras = raw.split(/\n{2,}/).map(p=>p.replace(/\s+/g,' ').trim()).filter(p=>p.length>30);
+  Object.assign(state, {
+    paragraphs:paras, paraWords:paras.map(p=>p.split(/\s+/).length),
+    paraTimeSpent:new Array(paras.length).fill(0),
+    totalWords:paras.reduce((a,p)=>a+p.split(/\s+/).length,0),
+    wordsRead:0, nextRecall:state.recallEvery,
+    sessionStart:Date.now(), accumulatedMs:0,
+    isPaused:false, pauseStart:null
+  });
+  renderReader(); showView('reader'); startTimers();
+  document.getElementById('pause-btn').style.display='';
+  document.getElementById('pulse-dot').style.display='block';
+}
+
+function renderReader() {
+  document.getElementById('reader').innerHTML = state.paragraphs.map((p,i)=>
+    `<div class="para-block" id="para-${i}" data-idx="${i}">${bionicPara(p,state.fixation)}</div>`
+  ).join('');
+  observeParagraphs();
+}
+function rebionicRender() {
+  state.paragraphs.forEach((p,i)=>{ const el=document.getElementById(`para-${i}`); if(el) el.innerHTML=bionicPara(p,state.fixation); });
+}
+function observeParagraphs() {
+  state.paraObservers.forEach(o=>o.disconnect()); state.paraObservers=[];
+  const obs=new IntersectionObserver(entries=>{
+    entries.forEach(entry=>{
+      const idx=parseInt(entry.target.dataset.idx);
+      if(entry.isIntersecting){state.activePara=idx;state.heatTimer=Date.now();updateZen();}
+      else if(state.heatTimer) state.paraTimeSpent[idx]=(state.paraTimeSpent[idx]||0)+(Date.now()-state.heatTimer)/1000;
+    });
+  },{threshold:0.5});
+  state.paragraphs.forEach((_,i)=>{const el=document.getElementById(`para-${i}`);if(el)obs.observe(el);});
+  state.paraObservers.push(obs);
+}
+
+window.addEventListener('scroll',()=>{
+  if(state.isPaused) return;
+  const total=document.body.scrollHeight-window.innerHeight;
+  const pct=total>0?Math.min(100,Math.round(window.scrollY/total*100)):0;
+  document.getElementById('progress-fill').style.width=pct+'%';
+  document.getElementById('m-pct').textContent=pct+'%';
+  const wr=Math.round(state.totalWords*pct/100);
+  state.wordsRead=wr;
+  document.getElementById('m-words').textContent=wr.toLocaleString();
+  if(wr>=state.nextRecall&&state.paragraphs.length){state.nextRecall+=state.recallEvery;openRecall();}
+},{passive:true});
+
+function getElapsedMs() { return state.isPaused ? state.accumulatedMs : state.accumulatedMs+(Date.now()-state.sessionStart); }
+function fmt(ms) { const s=Math.floor(ms/1000); return Math.floor(s/60)+':'+String(s%60).padStart(2,'0'); }
+
+function startTimers() {
+  if(state.sessionTimer) clearInterval(state.sessionTimer);
+  state.sessionTimer=setInterval(()=>{
+    if(state.isPaused) return;
+    document.getElementById('m-time').textContent=fmt(getElapsedMs());
+  },1000);
+}
+
+function togglePause() {
+  if(!state.paragraphs.length) return;
+  state.isPaused=!state.isPaused;
+  const btn=document.getElementById('pause-btn');
+  const banner=document.getElementById('pause-banner');
+  const dot=document.getElementById('pulse-dot');
+
+  if(state.isPaused) {
+    state.accumulatedMs+=Date.now()-state.sessionStart;
+    state.pauseStart=Date.now();
+    btn.textContent='▶ Resume';
+    btn.classList.add('paused');
+    banner.classList.add('visible');
+    dot.style.opacity='0.3';
+    if(state.pacerOn) clearInterval(state.pacerInterval);
+    if(state.pauseTickId) clearInterval(state.pauseTickId);
+    state.pauseTickId=setInterval(()=>{
+      if(!state.isPaused){clearInterval(state.pauseTickId);return;}
+      document.getElementById('pause-display').textContent=fmt(Date.now()-state.pauseStart);
+    },1000);
+  } else {
+    state.sessionStart=Date.now();
+    state.pauseStart=null;
+    if(state.pauseTickId){clearInterval(state.pauseTickId);state.pauseTickId=null;}
+    btn.textContent='⏸ Pause';
+    btn.classList.remove('paused');
+    banner.classList.remove('visible');
+    dot.style.opacity='1';
+    if(state.pacerOn) runPacer();
+  }
+}
+
+function toggleZen() {
+  state.zenMode=!state.zenMode;
+  document.getElementById('zen-btn').classList.toggle('active',state.zenMode);
+  updateZen();
+}
+function updateZen() {
+  if(!state.zenMode){document.querySelectorAll('.para-block').forEach(el=>el.classList.remove('dimmed','active'));return;}
+  document.querySelectorAll('.para-block').forEach(el=>{
+    const i=parseInt(el.dataset.idx);
+    el.classList.toggle('dimmed',i!==state.activePara);
+    el.classList.toggle('active',i===state.activePara);
+  });
+}
+
+function togglePacer() {
+  state.pacerOn=!state.pacerOn;
+  document.getElementById('pacer-btn').classList.toggle('active',state.pacerOn);
+  const line=document.getElementById('pacer-line');
+  if(state.pacerOn){line.style.display='block';state.pacerY=80;runPacer();}
+  else{line.style.display='none';if(state.pacerInterval)clearInterval(state.pacerInterval);}
+}
+function runPacer() {
+  if(state.pacerInterval) clearInterval(state.pacerInterval);
+  const ms=60000/(state.wpm*5);
+  state.pacerInterval=setInterval(()=>{
+    if(!state.pacerOn||state.isPaused) return;
+    state.pacerY+=1;
+    if(state.pacerY>window.scrollY+window.innerHeight-80) window.scrollBy({top:2,behavior:'smooth'});
+    document.getElementById('pacer-line').style.top=(state.pacerY-window.scrollY)+'px';
+    if(state.pacerY>=document.body.scrollHeight) togglePacer();
+  },ms);
+}
+
+document.addEventListener('visibilitychange',()=>{
+  if(document.hidden&&state.paragraphs.length&&!state.isPaused){
+    state.focusDeductions++;
+    state.focusScore=Math.max(0,100-state.focusDeductions*8);
+    document.getElementById('m-focus').textContent=state.focusScore;
+  }
+});
+
+function openRecall(){document.getElementById('recall-modal').classList.add('open');document.getElementById('recall-input').value='';document.getElementById('recall-input').focus();}
+function closeRecall(){document.getElementById('recall-modal').classList.remove('open');}
+function saveInsight(){
+  const v=document.getElementById('recall-input').value.trim();
+  if(v){state.insights.push({text:v,words:state.wordsRead,ts:new Date().toLocaleTimeString()});renderVault();}
+  closeRecall();
+}
+document.getElementById('recall-input').addEventListener('keydown',e=>{if(e.key==='Enter')saveInsight();if(e.key==='Escape')closeRecall();});
+
+function renderVault(){
+  const el=document.getElementById('vault-entries');
+  document.getElementById('s-insights').textContent=state.insights.length;
+  if(!state.insights.length){el.innerHTML='<p style="font-family:var(--mono);font-size:12px;color:var(--ink-ghost);font-style:italic;">Your insights will appear here after Recall checkpoints.</p>';return;}
+  el.innerHTML=state.insights.map(ins=>`<div class="vault-entry">"${ins.text}"<div class="vault-entry-meta">at ${ins.words.toLocaleString()} words · ${ins.ts}</div></div>`).join('');
+}
+
+function updateControls(){
+  state.fixation=parseInt(document.getElementById('fixation').value);
+  state.wpm=parseInt(document.getElementById('wpm-ctrl').value);
+  document.getElementById('fix-val').textContent=state.fixation;
+  document.getElementById('wpm-val').textContent=state.wpm;
+  document.getElementById('m-wpm').textContent=state.wpm;
+  document.getElementById('s-wpm').textContent=state.wpm;
+  if(state.paragraphs.length) rebionicRender();
+  if(state.pacerOn&&!state.isPaused) runPacer();
+}
+
+function showView(view){
+  document.getElementById('welcome').style.display='none';
+  document.getElementById('reader').style.display='none';
+  document.getElementById('metrics-page').style.display='none';
+  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+  if(view==='reader'){
+    if(!state.paragraphs.length) document.getElementById('welcome').style.display='flex';
+    else document.getElementById('reader').style.display='block';
+    document.querySelectorAll('.nav-tab')[0].classList.add('active');
+  } else {
+    document.getElementById('metrics-page').style.display='block';
+    document.querySelectorAll('.nav-tab')[1].classList.add('active');
+    document.getElementById('s-words').textContent=state.wordsRead.toLocaleString();
+    document.getElementById('s-time').textContent=Math.floor(getElapsedMs()/60000)+'m';
+    document.getElementById('s-focus').textContent=state.focusScore+'%';
+    renderHeatmap(); renderStreak(); renderVault();
+  }
+}
+
+function renderHeatmap(){
+  const top=state.paraTimeSpent.slice(0,8); const mx=Math.max(1,...top);
+  document.getElementById('heatmap-bars').innerHTML=top.map((t,i)=>
+    `<div class="heat-bar-wrap"><div class="heat-para-label">Para ${i+1}</div><div class="heat-bar-bg"><div class="heat-bar-fill" style="width:${Math.round(t/mx*100)}%"></div></div><div style="font-family:var(--mono);font-size:11px;color:var(--ink-ghost);width:36px;text-align:right;">${Math.round(t)}s</div></div>`
+  ).join('');
+}
+function renderStreak(){
+  document.getElementById('streak-grid').innerHTML=Array.from({length:28},(_,i)=>
+    `<div class="streak-day ${i===27?'today':i>=24||Math.random()>0.45?'active':''}"></div>`
+  ).join('');
+}
+
+renderStreak();
+</script>
+</body>
+</html>
